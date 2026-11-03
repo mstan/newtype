@@ -1,3 +1,11 @@
+<p align="center">
+  <a href="https://side7.gg"><img src="assets/side7-logo.png" alt="Side 7" width="220"></a>
+</p>
+
+<p align="center">
+  <sub>Brought to you by the <a href="https://side7.gg"><b>Side 7</b></a> team: the fan-run community that has kept Gundam Evolution online since Bandai Namco shut down the official servers in November 2023. Not affiliated with Bandai Namco.</sub>
+</p>
+
 # Newtype
 
 **A Discord anti-nuke bot that stops the attack before the damage.**

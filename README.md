@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <sub>Brought to you by the <a href="https://side7.gg"><b>Side 7</b></a> team: the fan-run community that has kept Gundam Evolution online since Bandai Namco shut down the official servers in November 2023. Not affiliated with Bandai Namco.</sub>
+  <sub>Brought to you by the <a href="https://side7.gg"><b>Side 7</b></a> Team, a Gundam Evolution revival community.</sub>
 </p>
 
 # Newtype
@@ -48,6 +48,10 @@ None of Discord's protections fired. They're designed for spam and join raids, n
 ### How Discord failed to follow up
 
 Afterwards, I opened a ticket with Discord. We're a community of nearly 24,000 members, and we lost three years of history to an attack that went straight through Discord's own permission model. I never spoke to a person. I got a canned macro response that didn't even address what had happened, and then the ticket was closed with no follow-up. Despite our size and how much we lost, Discord made it clear they don't take this seriously.
+
+Side 7 has 30 server boosts. At Discord's retail price of $4.99 per boost, that's about $150 a month, nearly $1,800 a year, that our members pay Discord, on top of all the usage data a community of 24,000 people generates for them. In return we have no backup, no recovery and a canned reply.
+
+**Let this be a warning to everyone running a community on Discord: you're on your own.** Paying for boosts doesn't buy you support, and Discord won't save your server or its history. Protect it yourself, and keep anything you can't afford to lose somewhere else.
 
 ### Why Newtype
 

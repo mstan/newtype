@@ -47,7 +47,24 @@ None of Discord's protections fired. They're designed for spam and join raids, n
 
 ### How Discord failed to follow up
 
-Afterwards, I opened a ticket with Discord. We're a community of nearly 24,000 members, and we lost three years of history to an attack that went straight through Discord's own permission model. I never spoke to a person. I got a canned macro response that didn't even address what had happened, and then the ticket was closed with no follow-up. Despite our size and how much we lost, Discord made it clear they don't take this seriously.
+I opened two tickets with Discord support. Neither got a reply written for our case. Both received the same canned text about impersonation scams and hacked accounts, word for word, followed by a request to rate my support experience. Both tickets were then marked solved. Nobody at Discord ever addressed the lost server, the attack, or whether anything could be restored. Despite our size and how much we lost, Discord made it clear they don't take this seriously.
+
+**Support minutes** (UTC; Discord's replies quoted from their emails)
+
+| When | Ticket | From | What |
+|---|---|---|---|
+| Oct 31, 02:29 | 1 | Side 7 | Opened ticket: server compromised in a raid, requesting a rollback |
+| Oct 31, 02:34 | 1 | Discord | Canned reply on impersonation, reporting messages and hacked accounts: *"Discord Staff will not directly message users on the Discord app for support-related inquiries."* Nothing about the server |
+| Oct 31, 04:29 | 1 | Side 7 | Follow-up |
+| Oct 31, 05:39 | 1 | Side 7 | Follow-up |
+| Nov 1, 05:15 | 1 | Discord | Survey: *"How would you rate your support experience?"* |
+| Nov 2, 00:02 | 2 | Side 7 | Opened a second ticket; the first had been marked solved without an answer |
+| Nov 2, 00:02 | 2 | Discord | Auto-reply: *"do you already have an open ticket about the same issue? If so, you can definitely follow up through your original ticket"*. The original was already marked solved |
+| Nov 2, 00:12 | 2 | Discord | The same canned reply as ticket 1, word for word |
+| Nov 2, 00:20 | 2 | Side 7 | Follow-up |
+| Nov 3, 01:55 | 2 | Discord | Survey: *"How would you rate your support experience?"* |
+
+**72 hours after asking for help:** two tickets, the same canned reply twice, two satisfaction surveys, both tickets marked solved, and no answer about the server.
 
 Side 7 has 30 server boosts. At Discord's retail price of $4.99 per boost, that's about $150 a month, nearly $1,800 a year, that our members pay Discord, on top of all the usage data a community of 24,000 people generates for them. In return we have no backup, no recovery and a canned reply.
 

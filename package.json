@@ -1,0 +1,25 @@
+{
+  "name": "newtype",
+  "version": "0.1.0",
+  "description": "Discord anti-nuke bot that stops the attack before the damage: new accounts can't hold privileged roles or add bots, and mass destruction is cut off.",
+  "license": "MIT",
+  "author": "Matthew Stanley",
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "calibrate": "node --env-file-if-exists=.env dist/calibrate.js",
+    "test": "tsc && node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "discord.js": "14.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}

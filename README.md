@@ -30,7 +30,7 @@ At 7:05 PM Pacific on October 30, 2026, a co-founding staff member's Discord acc
 
 ### What we had to do
 - **Watch it finish before we could act.** The destruction was over in 11 seconds. No response by a person, however fast, could have saved a single channel.
-- **Respond through a privileged bot and a developer AI tool.** The attack left hundreds of audit log entries in about a minute, and Discord gives server owners no way to sift through that at speed. To quickly identify and act on the rogue roles, channels and accounts, we had to drive our bot's privileged access token from a command-line developer AI harness, issuing Discord API requests directly. That's how we banned the accounts involved and cleared the 130 spam channels and 36 roles left behind. Running a privileged bot that way is a real risk we would never choose outside an emergency. Discord left us no alternative.
+- **Respond through a privileged bot and a developer AI tool.** The attack left hundreds of audit log entries in about a minute, and Discord gives server owners no way to sift through that at speed. To quickly identify and act on the rogue roles, channels and accounts, we had to drive our bot's privileged access token from a command-line developer AI harness, issuing Discord API requests directly. That's how we banned the accounts involved and cleared the spam channels staff hadn't already removed by hand, along with all 36 spam roles. Running a privileged bot that way is a real risk we would never choose outside an emergency. Discord left us no alternative.
 - **Build the protection ourselves.** Within 48 hours, our bot had safeguards Discord fails to provide.
 
 ### How Discord allows this to happen

@@ -6,6 +6,8 @@ In Gundam, a Newtype senses the attack before it lands. Discord can't, so this b
 
 MIT licensed. Free for every community.
 
+**Newtype is self-hosted.** There's no public bot to invite: you create your own copy and run it on a computer or server you control. The [step-by-step guide](#step-by-step-setup) walks through it with no experience needed.
+
 ---
 
 ## What happened to us
@@ -83,7 +85,102 @@ Newtype applies its rules to everyone, **the server owner included**. Owner acco
 
 To exempt a member, place their highest role **above Newtype's role**. Discord stops any bot from acting on members ranked above it. Do this sparingly: every exempt account is one whose compromise Newtype can't contain. At startup, Newtype lists every privileged role ranked above it so you can see exactly who is exempt.
 
-## Setup
+## Step-by-step setup
+
+This guide assumes no programming experience. It takes about 20 minutes.
+
+### What you need
+
+- **A computer that stays on.** Newtype only protects your server while it's running. A home PC that's always on works. A small cloud server (a "VPS", about $5 a month from providers like DigitalOcean, Linode or Hetzner) is better, because it never sleeps or restarts for updates.
+- **Owner or administrator access** to your Discord server.
+
+### 1. Create your bot on Discord
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and sign in.
+2. Click **New Application**, name it (for example "Newtype"), accept the terms and click **Create**.
+3. On the **General Information** page, copy the **Application ID** and keep it for step 2.
+4. Open the **Bot** page in the left menu:
+   - Turn **Public Bot** off, so only you can add it to servers.
+   - Leave all three **Privileged Gateway Intents** off. Newtype doesn't need them.
+   - Click **Reset Token**, confirm, and copy the token. Discord shows it only once.
+
+> **Keep the token secret.** Anyone who has it controls your bot, which can ban members and remove roles. Never post it or share it in a screenshot. If it leaks, come back here and click **Reset Token** to make the old one stop working.
+
+### 2. Add the bot to your server
+
+1. Copy this link and replace `YOUR_CLIENT_ID` with the Application ID from step 1:
+   ```
+   https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=268455046
+   ```
+2. Open it in your browser, pick your server and click **Authorize**.
+3. In Discord, open **Server Settings → Roles**. Drag the new bot's role as high as it will go, directly under your own top role. Newtype can't act on anyone whose role is above its own.
+
+### 3. Copy your server and log channel IDs
+
+1. In Discord, open **User Settings → Advanced** and turn on **Developer Mode**.
+2. Right-click your server's icon and choose **Copy Server ID**. Paste it somewhere.
+3. Pick (or create) a private staff channel for Newtype's alerts. Right-click it and choose **Copy Channel ID**. Paste that too.
+
+### 4. Install Node.js
+
+Download the **LTS** installer from [nodejs.org](https://nodejs.org) (version 22 or newer) and run it with the default options.
+
+### 5. Download Newtype
+
+On this GitHub page, click the green **Code** button, then **Download ZIP**. Unzip it somewhere permanent, such as `Documents\newtype`.
+
+### 6. Fill in your settings
+
+1. In the Newtype folder, make a copy of `.env.example` and name the copy `.env`. On Windows, if you can't see the `.env.example` file's ending, turn on **View → File name extensions** in File Explorer first.
+2. Open `.env` in Notepad (or any text editor) and fill in:
+   ```
+   DISCORD_TOKEN=paste-your-bot-token-here
+   NEWTYPE_MODE=report
+   NEWTYPE_LOG_CHANNELS=yourServerId:yourChannelId
+   ```
+   For example: `NEWTYPE_LOG_CHANNELS=1164093403265507360:1565928230005772390`
+3. Save the file.
+
+### 7. Start it
+
+1. Open a terminal in the Newtype folder:
+   - **Windows:** open the folder in File Explorer, click the address bar, type `cmd` and press Enter.
+   - **Mac:** open the Terminal app, type `cd ` (with a space), drag the Newtype folder into the window and press Enter.
+2. Run these three commands, one at a time:
+   ```
+   npm ci
+   npm run build
+   npm start
+   ```
+3. You should see `Newtype online as YourBot#1234 in REPORT mode`. Any lines that follow are warnings worth reading:
+   - **Missing permissions:** re-invite the bot with the link from step 2.
+   - **Privileged roles rank above Newtype:** members with those roles are out of its reach. Move Newtype's role higher in **Server Settings → Roles**, unless you mean to exempt them.
+   - **No log channel:** check `NEWTYPE_LOG_CHANNELS` in `.env`.
+
+Newtype stops when you close this window. To keep it running, see [Keeping it running](#keeping-it-running).
+
+### 8. Watch, then switch on
+
+Newtype starts in **report mode**: it posts what it *would* do to your log channel and DMs you, but changes nothing. Leave it like that for a few days. If it flags normal staff activity, fit the limits to your server: run `npm run calibrate -- yourServerId` and copy the `NEWTYPE_RATE_LIMITS=` line it prints into `.env`. When you're happy, change `NEWTYPE_MODE=report` to `NEWTYPE_MODE=enforce` in `.env` and restart it.
+
+### Keeping it running
+
+On a VPS or an always-on PC, use **pm2** so Newtype restarts automatically after crashes and reboots. In the Newtype folder, run:
+
+```
+npm install -g pm2
+pm2 start dist/index.js --name newtype --node-args="--env-file-if-exists=.env"
+pm2 save
+pm2 startup
+```
+
+`pm2 startup` prints one more command to copy and run; that makes it start when the computer does. It works on Linux and Mac; on a Windows PC, the simplest option is to leave the window from step 7 open, or to run Newtype on a VPS instead. Use `pm2 logs newtype` to see its output and `pm2 restart newtype` after changing `.env`.
+
+### Updating
+
+Download the new version, copy your `.env` into it, then run `npm ci` and `npm run build` again and restart it.
+
+## Quick setup (for developers)
 
 1. **Create the bot.** At the [Discord Developer Portal](https://discord.com/developers/applications), create an application, add a bot, and copy its token. Newtype needs **no privileged intents**.
 2. **Invite it** with the permissions it uses (View Audit Log, Manage Roles, Kick, Ban, plus View Channels, Send Messages and Embed Links for alerts), replacing `YOUR_CLIENT_ID`:

@@ -30,7 +30,7 @@ At 7:05 PM Pacific on October 30, 2026, a co-founding staff member's Discord acc
 
 ### What we had to do
 - **Watch it finish before we could act.** The destruction was over in 11 seconds. No response by a person, however fast, could have saved a single channel.
-- **Respond through a privileged bot and an AI assistant.** The attack left hundreds of audit log entries in about a minute, and Discord gives server owners no way to sift through that at speed. The only way to quickly work out who had done what, then ban the accounts involved and clear the 130 spam channels and 36 roles left behind, was to run our bot's privileged access token through an AI assistant. It read the audit log, identified the attackers and carried out each step. Running a privileged bot that way is a real risk we would never choose outside an emergency. Discord left us no alternative.
+- **Respond through a privileged bot and a developer AI tool.** The attack left hundreds of audit log entries in about a minute, and Discord gives server owners no way to sift through that at speed. To quickly identify and act on the rogue roles, channels and accounts, we had to drive our bot's privileged access token from a command-line developer AI harness, issuing Discord API requests directly. That's how we banned the accounts involved and cleared the 130 spam channels and 36 roles left behind. Running a privileged bot that way is a real risk we would never choose outside an emergency. Discord left us no alternative.
 - **Build the protection ourselves.** Within 48 hours, our bot had safeguards Discord fails to provide.
 
 ### How Discord allows this to happen
@@ -76,7 +76,7 @@ Discord fails to prevent this, so I've built this in response and am making it a
 
 Among the open-source anti-nuke bots we found, the common approach is an allowlist that bans unapproved bot adds and reacts to mass deletion. That approach breaks normal staff work. It also starts too late: by the time mass deletion is detected, 75 channels are gone. Newtype goes after the steps that come before the damage:
 
-- **It checks how recently someone joined, not an allowlist.** An account less than 24 hours old can't keep a privileged role or add a bot. Staff can still promote established members normally.
+- **It checks how new an account is, not an allowlist.** A Discord account less than 7 days old, or any account that joined your server in the last 24 hours, can't keep a privileged role or add a bot. Staff can still promote established members normally.
 - **It breaks the escalation chain.** Our attack would have been stopped at the role grant, 47 seconds before the bot existed.
 - **Its speed limits are tuned to your server.** `npm run calibrate` reads your own audit history and suggests limits.
 - **It logs every bot add**, whoever does it.
@@ -89,10 +89,12 @@ Among the open-source anti-nuke bots we found, the common approach is an allowli
 
 | Rule | Trigger | Action | DM to |
 |---|---|---|---|
-| New member adds a bot | An account that joined less than 24 hours ago adds a bot | Remove the bot | The member who added it |
-| New member gets a privileged role | A role with Administrator, Manage Server, Manage Roles, Manage Channels, Manage Webhooks, Ban or Kick goes to an account that joined less than 24 hours ago | Remove that role only; whoever gave it is untouched | The member who received it |
+| New member adds a bot | A new member (see below) adds a bot | Remove the bot | The member who added it |
+| New member gets a privileged role | A role with Administrator, Manage Server, Manage Roles, Manage Channels, Manage Webhooks, Ban or Kick goes to a new member | Remove that role only; whoever gave it is untouched | The member who received it |
 | Mass actions | Above the limits below, in one minute | Ban a bot, or remove every role from a member | The member (bots get no DM) |
 | Every bot add | Any bot is added, by anyone | Notice in the log channel | |
+
+A **new member** is anyone whose Discord account is less than **7 days** old, or who joined your server less than **24 hours** ago, whatever their account's age. A Discord account's age is built into its ID, so it can't be faked. Both windows are configurable.
 
 Default limits per minute (calibrated on a 24,000-member server's normal six weeks; the nuke ran at 75 deletions a second):
 
@@ -239,7 +241,8 @@ Download the new version, copy your `.env` into it, then run `npm ci` and `npm r
 | `DISCORD_TOKEN` | required | Bot token |
 | `NEWTYPE_MODE` | `report` | `report` alerts only; `enforce` acts |
 | `NEWTYPE_LOG_CHANNELS` | none | `serverId:channelId` pairs, comma-separated. Without one, alerts go to the owner by DM |
-| `NEWTYPE_NEW_MEMBER_HOURS` | `24` | How long after joining a member counts as new |
+| `NEWTYPE_NEW_ACCOUNT_DAYS` | `7` | A Discord account younger than this counts as new |
+| `NEWTYPE_NEW_MEMBER_HOURS` | `24` | A member who joined the server more recently than this counts as new, whatever their account's age |
 | `NEWTYPE_RATE_LIMITS` | defaults above | JSON from `npm run calibrate`, e.g. `{"ChannelDelete":{"limit":5,"windowSeconds":60}}` |
 
 ## What it can't do

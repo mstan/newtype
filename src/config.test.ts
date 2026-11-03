@@ -9,6 +9,7 @@ const base = { DISCORD_TOKEN: 'token' };
 test('defaults: report mode, 24h, no log channels, default limits', () => {
 	const config = loadConfig(base);
 	assert.equal(config.mode, 'report');
+	assert.equal(config.newAccountMs, 7 * 86_400_000);
 	assert.equal(config.newMemberMs, 24 * 3_600_000);
 	assert.equal(config.logChannels.size, 0);
 	assert.deepEqual(config.rateLimits, DEFAULT_RATE_LIMITS);
@@ -25,6 +26,7 @@ test('bad settings fail loudly at startup', () => {
 	assert.throws(() => loadConfig({ ...base, NEWTYPE_MODE: 'on' }), /NEWTYPE_MODE/);
 	assert.throws(() => loadConfig({ ...base, NEWTYPE_LOG_CHANNELS: 'mod-log' }), /guildId:channelId/);
 	assert.throws(() => loadConfig({ ...base, NEWTYPE_NEW_MEMBER_HOURS: '-1' }), /NEWTYPE_NEW_MEMBER_HOURS/);
+	assert.throws(() => loadConfig({ ...base, NEWTYPE_NEW_ACCOUNT_DAYS: 'week' }), /NEWTYPE_NEW_ACCOUNT_DAYS/);
 	assert.throws(() => parseRateLimits('{'), /not valid JSON/);
 	assert.throws(() => parseRateLimits('{"MessageDelete":{"limit":3}}'), /not one of/);
 	assert.throws(() => parseRateLimits('{"ChannelDelete":{"limit":0}}'), /positive integer/);

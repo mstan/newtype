@@ -1,6 +1,6 @@
 // Decision logic, with no Discord calls so it can be tested on its own. Given one audit
 // log entry and a way to look things up about the server, it returns what should be done.
-import { AuditLogEvent, PermissionFlagsBits } from 'discord.js';
+import { AuditLogEvent, PermissionFlagsBits, SnowflakeUtil } from 'discord.js';
 
 // A role carrying any of these can destroy the server or let someone else do it
 export const DANGEROUS_PERMISSIONS = [
@@ -13,6 +13,10 @@ export const DANGEROUS_PERMISSIONS = [
 	PermissionFlagsBits.KickMembers,
 ];
 
+// A member is "new", and may not hold privileged roles or add bots, if their Discord
+// account is younger than DEFAULT_NEW_ACCOUNT_MS or they joined the server within
+// DEFAULT_NEW_MEMBER_MS, whatever their account's age.
+export const DEFAULT_NEW_ACCOUNT_MS = 7 * 24 * 60 * 60 * 1000;
 export const DEFAULT_NEW_MEMBER_MS = 24 * 60 * 60 * 1000;
 
 export interface RateLimit {
@@ -66,6 +70,7 @@ export interface PolicyOptions {
 	// The bot's own user ID; its own actions are the only ones never evaluated
 	selfId: string;
 	serverName: string;
+	newAccountMs?: number;
 	newMemberMs?: number;
 	rateLimits?: Partial<Record<AuditLogEvent, RateLimit>>;
 }
@@ -75,12 +80,17 @@ export function isDangerous(permissions: bigint): boolean {
 }
 
 const hours = (ms: number) => Math.round(ms / 3_600_000);
+const days = (ms: number) => Math.round(ms / 86_400_000);
+
+// When a member counts as established again, e.g. "at least 7 days old and has been in the server for at least 24 hours"
+const establishedWhen = (newAccountMs: number, newMemberMs: number) =>
+	`your Discord account is at least ${days(newAccountMs)} days old and has been in the server for at least ${hours(newMemberMs)} hours`;
 
 export const messages = {
-	privilegedRole: (server: string, roles: string, newMemberMs: number) =>
-		`Hi! As a security measure, your ${roles} role${roles.includes(',') ? 's were' : ' was'} removed automatically on the ${server} Discord because your account joined the server less than ${hours(newMemberMs)} hours ago. Privileged roles can be given again once your account has been in the server for ${hours(newMemberMs)} hours. If you have questions, please contact the ${server} staff.`,
-	botRemoved: (server: string, botId: string, newMemberMs: number) =>
-		`Hi! As a security measure, the bot <@${botId}> you added to the ${server} Discord was removed automatically because your account joined the server less than ${hours(newMemberMs)} hours ago. Once your account has been in the server for ${hours(newMemberMs)} hours, it can be added again. If you have questions, please contact the ${server} staff.`,
+	privilegedRole: (server: string, roles: string, why: string, newAccountMs: number, newMemberMs: number) =>
+		`Hi! As a security measure, your ${roles} role${roles.includes(',') ? 's were' : ' was'} removed automatically on the ${server} Discord because ${why}. Privileged roles can be given again once ${establishedWhen(newAccountMs, newMemberMs)}. If you have questions, please contact the ${server} staff.`,
+	botRemoved: (server: string, botId: string, why: string, newAccountMs: number, newMemberMs: number) =>
+		`Hi! As a security measure, the bot <@${botId}> you added to the ${server} Discord was removed automatically because ${why}. It can be added again once ${establishedWhen(newAccountMs, newMemberMs)}. If you have questions, please contact the ${server} staff.`,
 	massAction: (server: string, count: number, label: string, seconds: number) =>
 		`Hi! As a security measure, your roles on the ${server} Discord were removed automatically because your account made ${count} ${label} within ${seconds} seconds, which matches the pattern of a server attack. If this was legitimate work, please contact the server owner to have your roles restored.`,
 };
@@ -108,13 +118,15 @@ function addedRoles(entry: AuditEntry): Array<{ id: string; name: string }> {
 export class Policy {
 	private readonly selfId: string;
 	private readonly serverName: string;
+	private readonly newAccountMs: number;
 	private readonly newMemberMs: number;
 	private readonly rateLimits: Partial<Record<AuditLogEvent, RateLimit>>;
 	private readonly windows = new Map<AuditLogEvent, RateWindow>();
 
-	constructor({ selfId, serverName, newMemberMs = DEFAULT_NEW_MEMBER_MS, rateLimits = DEFAULT_RATE_LIMITS }: PolicyOptions) {
+	constructor({ selfId, serverName, newAccountMs = DEFAULT_NEW_ACCOUNT_MS, newMemberMs = DEFAULT_NEW_MEMBER_MS, rateLimits = DEFAULT_RATE_LIMITS }: PolicyOptions) {
 		this.selfId = selfId;
 		this.serverName = serverName;
+		this.newAccountMs = newAccountMs;
 		this.newMemberMs = newMemberMs;
 		this.rateLimits = rateLimits;
 		for (const [action, limit] of Object.entries(rateLimits)) {
@@ -122,9 +134,17 @@ export class Policy {
 		}
 	}
 
-	private isNewMember(userId: string, at: number, lookup: Lookup): boolean {
+	// Why a member counts as new, in words for summaries and DMs, or null if they're established.
+	// A Discord account's creation time is encoded in its ID.
+	private whyNew(userId: string, at: number, lookup: Lookup): string | null {
+		if (at - SnowflakeUtil.timestampFrom(userId) < this.newAccountMs) {
+			return `your Discord account is less than ${days(this.newAccountMs)} days old`;
+		}
 		const joinedAt = lookup.joinedAt(userId);
-		return joinedAt != null && at - joinedAt < this.newMemberMs;
+		if (joinedAt != null && at - joinedAt < this.newMemberMs) {
+			return `your account joined the server less than ${hours(this.newMemberMs)} hours ago`;
+		}
+		return null;
 	}
 
 	evaluate(entry: AuditEntry, lookup: Lookup): Finding[] {
@@ -136,18 +156,20 @@ export class Policy {
 			return findings;
 		}
 
-		// 1. A bot added by a member who joined recently
-		if (entry.action === AuditLogEvent.BotAdd && targetId && this.isNewMember(executorId, at, lookup)) {
+		// 1. A bot added by a new member
+		const adderNew = entry.action === AuditLogEvent.BotAdd && targetId ? this.whyNew(executorId, at, lookup) : null;
+		if (adderNew && targetId) {
 			findings.push({
 				rule: 'new-member-bot',
-				summary: `<@${executorId}> joined less than ${hours(this.newMemberMs)}h ago and added bot <@${targetId}>`,
+				summary: `<@${executorId}> added bot <@${targetId}>, but ${adderNew.replace('your', 'their')}`,
 				actions: [{ type: 'kickBot', userId: targetId }],
-				notify: { userId: executorId, message: messages.botRemoved(this.serverName, targetId, this.newMemberMs) },
+				notify: { userId: executorId, message: messages.botRemoved(this.serverName, targetId, adderNew, this.newAccountMs, this.newMemberMs) },
 			});
 		}
 
-		// 2. A dangerous role given to a member who joined recently
-		if (entry.action === AuditLogEvent.MemberRoleUpdate && targetId && this.isNewMember(targetId, at, lookup)) {
+		// 2. A dangerous role given to a new member
+		const targetNew = entry.action === AuditLogEvent.MemberRoleUpdate && targetId ? this.whyNew(targetId, at, lookup) : null;
+		if (targetNew && targetId) {
 			const dangerous = addedRoles(entry).filter((r) => {
 				const permissions = lookup.rolePermissions(r.id);
 				return permissions != null && isDangerous(permissions);
@@ -156,9 +178,9 @@ export class Policy {
 				const roleNames = dangerous.map((r) => r.name).join(', ');
 				findings.push({
 					rule: 'new-member-privileged-role',
-					summary: `<@${executorId}> gave <@${targetId}> ${roleNames}, but they joined less than ${hours(this.newMemberMs)}h ago`,
+					summary: `<@${executorId}> gave <@${targetId}> ${roleNames}, but ${targetNew.replace('your', 'their')}`,
 					actions: [{ type: 'removeRoles', userId: targetId, roleIds: dangerous.map((r) => r.id) }],
-					notify: { userId: targetId, message: messages.privilegedRole(this.serverName, roleNames, this.newMemberMs) },
+					notify: { userId: targetId, message: messages.privilegedRole(this.serverName, roleNames, targetNew, this.newAccountMs, this.newMemberMs) },
 				});
 			}
 		}

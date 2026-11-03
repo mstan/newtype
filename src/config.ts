@@ -1,11 +1,12 @@
 import { AuditLogEvent } from 'discord.js';
-import { DEFAULT_NEW_MEMBER_MS, DEFAULT_RATE_LIMITS, type RateLimit } from './policy.js';
+import { DEFAULT_NEW_ACCOUNT_MS, DEFAULT_NEW_MEMBER_MS, DEFAULT_RATE_LIMITS, type RateLimit } from './policy.js';
 import type { Mode } from './newtype.js';
 
 export interface Config {
 	token: string;
 	mode: Mode;
 	logChannels: Map<string, string>;
+	newAccountMs: number;
 	newMemberMs: number;
 	rateLimits: Partial<Record<AuditLogEvent, RateLimit>>;
 }
@@ -32,12 +33,22 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
 		logChannels.set(guildId, channelId);
 	}
 
-	const hours = Number(env.NEWTYPE_NEW_MEMBER_HOURS?.trim() || 24);
-	if (!Number.isFinite(hours) || hours <= 0) {
-		throw new Error(`NEWTYPE_NEW_MEMBER_HOURS must be a positive number, not "${env.NEWTYPE_NEW_MEMBER_HOURS}"`);
-	}
+	return {
+		token,
+		mode,
+		logChannels,
+		newAccountMs: positive(env, 'NEWTYPE_NEW_ACCOUNT_DAYS', DEFAULT_NEW_ACCOUNT_MS / 86_400_000) * 86_400_000,
+		newMemberMs: positive(env, 'NEWTYPE_NEW_MEMBER_HOURS', DEFAULT_NEW_MEMBER_MS / 3_600_000) * 3_600_000,
+		rateLimits: parseRateLimits(env.NEWTYPE_RATE_LIMITS),
+	};
+}
 
-	return { token, mode, logChannels, newMemberMs: hours * 3_600_000, rateLimits: parseRateLimits(env.NEWTYPE_RATE_LIMITS) };
+function positive(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+	const value = Number(env[name]?.trim() || fallback);
+	if (!Number.isFinite(value) || value <= 0) {
+		throw new Error(`${name} must be a positive number, not "${env[name]}"`);
+	}
+	return value;
 }
 
 // JSON keyed by audit log action name, e.g. {"ChannelDelete":{"limit":4,"windowSeconds":60}}.

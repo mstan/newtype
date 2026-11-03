@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AuditLogEvent, PermissionFlagsBits } from 'discord.js';
+import { AuditLogEvent, PermissionFlagsBits, SnowflakeUtil } from 'discord.js';
 import { DEFAULT_RATE_LIMITS, Policy, type AuditEntry, type Lookup } from './policy.js';
 
 // IDs and timings from the real 2026-10-31 nuke of a 24,000-member server
@@ -146,4 +146,41 @@ test('members are told why their privileged role or bot was removed', () => {
 	assert.match(role.notify!.message, /security measure, your Developer role was removed .* less than 24 hours ago/);
 	const bot = policy().evaluate(botAdd(ATTACKER, NUKE_BOT, t('2026-10-31T01:00:00Z')), l)[0]!;
 	assert.match(bot.notify!.message, new RegExp(`security measure, the bot <@${NUKE_BOT}> you added`));
+});
+
+// A user ID whose embedded creation time is `createdAt`
+const accountCreatedAt = (createdAt: number) => SnowflakeUtil.generate({ timestamp: createdAt }).toString();
+const DAY = 24 * HOUR;
+
+test('a Discord account under 7 days old cannot hold a privileged role, even after its first day in the server', () => {
+	const at = t('2026-10-31T02:07:21Z');
+	const fresh = accountCreatedAt(at - 3 * DAY);
+	const findings = policy().evaluate(grant(STAFF, fresh, [ADMIN_ROLE], at), lookup({ joined: { [fresh]: at - 2 * DAY } }));
+	assert.deepEqual(findings[0]!.actions, [{ type: 'removeRoles', userId: fresh, roleIds: [ADMIN_ROLE.id] }]);
+	assert.match(findings[0]!.summary, /their Discord account is less than 7 days old/);
+	assert.match(findings[0]!.notify!.message, /because your Discord account is less than 7 days old\. Privileged roles can be given again once your Discord account is at least 7 days old and has been in the server for at least 24 hours/);
+
+	const weekOld = accountCreatedAt(at - 8 * DAY);
+	assert.deepEqual(policy().evaluate(grant(STAFF, weekOld, [ADMIN_ROLE], at), lookup({ joined: { [weekOld]: at - 2 * DAY } })), []);
+});
+
+test('an old account that joined the server in the last 24 hours is still new', () => {
+	const at = t('2026-10-31T02:07:21Z');
+	const findings = policy().evaluate(grant(STAFF, ATTACKER, [ADMIN_ROLE], at), lookup({ joined: { [ATTACKER]: at - 25_000 } }));
+	assert.match(findings[0]!.notify!.message, /because your account joined the server less than 24 hours ago/);
+});
+
+test('a bot added by a Discord account under 7 days old is removed', () => {
+	const at = t('2026-10-31T02:08:08Z');
+	const fresh = accountCreatedAt(at - 3 * DAY);
+	const findings = policy().evaluate(botAdd(fresh, NUKE_BOT, at), lookup({ joined: { [fresh]: at - 2 * DAY }, bots: [NUKE_BOT] }));
+	assert.deepEqual(findings[0]!.actions, [{ type: 'kickBot', userId: NUKE_BOT }]);
+});
+
+test('the account-age window is configurable', () => {
+	const at = t('2026-10-31T02:07:21Z');
+	const tenDays = accountCreatedAt(at - 10 * DAY);
+	const strict = new Policy({ selfId: SELF, serverName: 'Side 7', newAccountMs: 30 * DAY });
+	assert.equal(strict.evaluate(grant(STAFF, tenDays, [ADMIN_ROLE], at), lookup({ joined: { [tenDays]: at - 5 * DAY } })).length, 1);
+	assert.equal(policy().evaluate(grant(STAFF, tenDays, [ADMIN_ROLE], at), lookup({ joined: { [tenDays]: at - 5 * DAY } })).length, 0);
 });

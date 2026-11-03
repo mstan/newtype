@@ -9,6 +9,7 @@ export interface NewtypeOptions {
 	mode: Mode;
 	// guildId -> channelId for alerts and bot-add notices
 	logChannels: ReadonlyMap<string, string>;
+	newAccountMs?: number;
 	newMemberMs?: number;
 	rateLimits?: Partial<Record<AuditLogEvent, RateLimit>>;
 	log?: (message: string) => void;
@@ -47,6 +48,7 @@ export class Newtype {
 			policy = new Policy({
 				selfId: guild.client.user.id,
 				serverName: guild.name,
+				newAccountMs: this.options.newAccountMs,
 				newMemberMs: this.options.newMemberMs,
 				rateLimits: this.options.rateLimits,
 			});
